@@ -8,6 +8,11 @@
             "type": "command",
             "command": "python3 scripts/check_doxygen.py --hook claude || python scripts/check_doxygen.py --hook claude",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "python3 scripts/lint_vba.py --hook claude || python scripts/lint_vba.py --hook claude",
+            "timeout": 20
           }
         ]
       }

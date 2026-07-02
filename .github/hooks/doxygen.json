@@ -7,6 +7,12 @@
         "bash": "python3 scripts/check_doxygen.py --hook copilot",
         "powershell": "python scripts/check_doxygen.py --hook copilot",
         "timeoutSec": 20
+      },
+      {
+        "type": "command",
+        "bash": "python3 scripts/lint_vba.py --hook copilot",
+        "powershell": "python scripts/lint_vba.py --hook copilot",
+        "timeoutSec": 20
       }
     ]
   }

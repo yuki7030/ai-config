@@ -25,9 +25,24 @@
 リンク不可の環境ではディレクトリをコピーして同期する。
 
 ## 運用フロー
+### A. 自律モード(推奨): `/implement <要求 または 仕様書パス>`
+仕様書起案 → **人が承認(唯一のゲート)** → 実装 → 静的解析ループ(自動修正・最大3周)→ セルフレビュー → 完了報告 まで自律実行。
+フロー定義と停止条件は .github/skills/autonomous-dev/SKILL.md に一元化。
+
+### B. 手動モード(段階ごとに人が確認したい場合)
 1. `/spec <要求>` → 仕様書起案 → 人が承認
 2. 実装依頼(vba-developer / csharp-developer)
 3. `/review` → 指摘対応 → コミット
+
+### モデル選択方針(コスト最適化)
+| フェーズ | 階層 | Claude Code | Copilot |
+|---|---|---|---|
+| 要求分析・仕様起案・レビュー | 高性能 | opus(agents の model で自動) | モデルピッカーで選択 |
+| 実装 | 中性能 | sonnet(同上) | 同上 |
+| 静的解析指摘の定型修正 | 低性能 | haiku(static-fixer) | 同上 |
+
+Claude Code は .claude/agents/*.md の `model:` フロントマターで自動適用。
+Copilot の .agent.md にも `# model:` 行を用意済み(コメントアウト)。環境のモデル一覧の正式名称に書き換えて有効化する(名称不一致だとエージェントが読み込めない環境があるため既定は無効)。
 
 ## トークン節約の仕組み
 - 常駐するのは AGENTS.md(短文)とスキルの説明文のみ。
@@ -45,7 +60,7 @@
 - 各行に「この行を消すとAIが誤動作するか?」テスト。Noなら削除
 - 「なぜ」が不明なルール → 理由を1句添える(遵守率・応用力が向上)
 
-## Doxygenヘッダ自動検査(Hooks + CI)
+## 静的解析の自動検査(Hooks + CI)
 3層で規約を機械的に保証する(指示文より確実):
 | 層 | 設定ファイル | 動作 |
 |---|---|---|
@@ -53,20 +68,5 @@
 | Copilot (CLI/coding agent/VS Code) | .github/hooks/doxygen.json | 編集直後に検査結果を通知 |
 | CI (最終ゲート) | .github/workflows/doxygen-check.yml | PR/push時に全ファイル検査。人間のコミットも対象 |
 
-検査本体は scripts/check_doxygen.py 1本(要 Python 3.8+)。
-- C#: public/protected/internal のクラス・メソッド等に `///` ヘッダ必須
-- VBA: Public Sub/Function/Property に `'!` ヘッダ必須、Option Explicit 必須
-- 手動実行: `python scripts/check_doxygen.py --scan .`
-- Windows で python3 コマンドが無い場合は設定内の python3 を python に読み替え(Claude Code側はフォールバック記述済み)
-
-## プロジェクト知識ファイル(docs/)
-| ファイル | 内容 | 作成優先度 |
-|---|---|---|
-| docs/glossary.md | 用語⇔コード対応表。AIの誤解釈防止の要 | 1(最優先) |
-| docs/schema.md | テーブル/シート構造+サンプル1行 | 2 |
-| docs/business-rules.md | 計算・判定ルール。例外を優先記載 | 3 |
-| docs/domain/ | 領域別詳細(_template.md を複製) | 必要時 |
-| docs/knowledge/ | ハマりどころ(_template.md を複製) | 随時 |
-
-運用: AIが用語を誤解したら会話で訂正するだけでなく glossary.md に1行追加(会話は消えるがファイルは残る)。
-頻出領域は .github/skills/_domain-template/ を複製して領域スキル化すると、関連タスク時のみ自動ロードされる。
+検査本体は2本(要 Python 3.8+)。全層で共用:
+- scripts/check_doxygen.py: C#=public類に `//
