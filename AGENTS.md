@@ -30,5 +30,10 @@
 - C#実装: .github/skills/csharp-coding/
 - レビュー: .github/skills/code-review/
 
+## プロジェクト知識(該当時に必ず参照)
+- 不明な用語・略語 → docs/glossary.md(推測で解釈しない)
+- データ構造 → docs/schema.md / 業務ルール → docs/business-rules.md
+- 領域詳細 → docs/domain/ / 既知の罠 → docs/knowledge/
+
 ## 検証
 <!-- プロジェクトのビルド/テストコマンドを記載。例: dotnet build && dotnet test -->
