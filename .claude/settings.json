@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_doxygen.py --hook claude || python scripts/check_doxygen.py --hook claude",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -39,3 +39,17 @@
 2. 古くなったルール → 削除
 3. AGENTS.md が40行超 → スキルへ分離
 4. 「なぜ」が不明なルール → 理由を1句添える(遵守率・応用力が向上)
+
+## Doxygenヘッダ自動検査(Hooks + CI)
+3層で規約を機械的に保証する(指示文より確実):
+| 層 | 設定ファイル | 動作 |
+|---|---|---|
+| Claude Code | .claude/settings.json | 編集直後に検査。違反はAIへ差し戻し自動修正させる(exit 2) |
+| Copilot (CLI/coding agent/VS Code) | .github/hooks/doxygen.json | 編集直後に検査結果を通知 |
+| CI (最終ゲート) | .github/workflows/doxygen-check.yml | PR/push時に全ファイル検査。人間のコミットも対象 |
+
+検査本体は scripts/check_doxygen.py 1本(要 Python 3.8+)。
+- C#: public/protected/internal のクラス・メソッド等に `///` ヘッダ必須
+- VBA: Public Sub/Function/Property に `'!` ヘッダ必須、Option Explicit 必須
+- 手動実行: `python scripts/check_doxygen.py --scan .`
+- Windows で python3 コマンドが無い場合は設定内の python3 を python に読み替え(Claude Code側はフォールバック記述済み)

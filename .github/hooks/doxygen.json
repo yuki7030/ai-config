@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "python3 scripts/check_doxygen.py --hook copilot",
+        "powershell": "python scripts/check_doxygen.py --hook copilot",
+        "timeoutSec": 20
+      }
+    ]
+  }
+}
