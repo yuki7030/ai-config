@@ -1,0 +1,41 @@
+name: instruction-audit
+on:
+  schedule:
+    - cron: '0 0 1 * *'   # 毎月1日 09:00 JST に棚卸
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # 未更新日数の算出に履歴が必要
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: 指示ファイル機械監査
+        id: audit
+        run: |
+          set +e
+          python scripts/audit_instructions.py --scan . --format github > report.md
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: 指摘があればIssueを起票
+        if: steps.audit.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create instruction-audit --description "指示ファイル棚卸" --color BFD4F2 --force || true
+          {
+            echo ""
+            echo "---"
+            echo "対処: \`/audit-instructions\` を実行すると instruction-auditor が意味的監査と修正まで行います。"
+          } >> report.md
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label instruction-audit --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file report.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "指示ファイル棚卸 $(date +%Y-%m)" \
+              --label instruction-audit --body-file report.md
+          fi

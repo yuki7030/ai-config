@@ -12,10 +12,11 @@
 | .github/instructions/*.instructions.md | Copilot | 拡張子別の自動適用ルール |
 | .github/skills/*/SKILL.md | 両方 | 作業手順・規約本体(遅延ロードで低トークン) |
 | .github/agents/*.agent.md | Copilot | 専任エージェント |
-| .github/prompts/*.prompt.md | Copilot | /spec /review コマンド |
+| .github/prompts/*.prompt.md | Copilot | /spec /review /audit-instructions コマンド |
 | .claude/agents/*.md | Claude Code | 専任サブエージェント |
-| .claude/commands/*.md | Claude Code | /spec /review コマンド |
+| .claude/commands/*.md | Claude Code | /spec /review /audit-instructions コマンド |
 | docs/spec/_template.md | 両方 | 仕様書テンプレート |
+| scripts/audit_instructions.py ほか | 両方 | 指示ファイルの機械監査(月次自動・下記) |
 
 ## Claude Code でスキルを共有する(必須)
 スキル本体は .github/skills/ に一元化。Claude Code からはリンクで共有:
@@ -33,12 +34,16 @@
 - 規約本体(SKILL.md)は関連タスク時のみロード。
 - 指示の重複を排し、参照(リンク)で一元管理。
 
-## 剪定運用(月1回・重要)
-設定ファイルは毎リクエストでコンテキストに乗り続けるコスト。以下を定期確認:
-1. AIが繰り返し無視したルール → 表現を強める or スキル/Hooksへ移す
-2. 古くなったルール → 削除
-3. AGENTS.md が40行超 → スキルへ分離
-4. 「なぜ」が不明なルール → 理由を1句添える(遵守率・応用力が向上)
+## 剪定運用(棚卸・自動化済み)
+設定ファイルは毎リクエストでコンテキストに乗り続けるコスト。棚卸は2段構え:
+1. 機械監査(全自動): 毎月1日に .github/workflows/instruction-audit.yml が scripts/audit_instructions.py を実行し、壊れた参照・行数予算超過・重複行・.claude⇔.github ペア不整合・フロントマター欠落を検出して Issue を起票。手動実行: `python scripts/audit_instructions.py --scan .`
+2. 意味監査(半自動): Issue が立ったら(または月1回)`/audit-instructions` を実行。instruction-auditor エージェントが「古い仕様の残骸・重複・矛盾・肥大化・実効性・なぜの欠如」を横断監査し、承認後に修正まで実施。報告書は docs/audit/ に蓄積。
+
+判断基準は .github/skills/instruction-audit/SKILL.md に一元化:
+- AIが繰り返し無視したルール → 表現を強める or スキル/Hooksへ移す
+- AGENTS.md が40行超 → スキルへ分離
+- 各行に「この行を消すとAIが誤動作するか?」テスト。Noなら削除
+- 「なぜ」が不明なルール → 理由を1句添える(遵守率・応用力が向上)
 
 ## Doxygenヘッダ自動検査(Hooks + CI)
 3層で規約を機械的に保証する(指示文より確実):
