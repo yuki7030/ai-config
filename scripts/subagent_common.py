@@ -203,14 +203,20 @@ def reap(agent_id: str, agent_type: str) -> None:
 # ---------- OS ネイティブ通知 ----------
 
 # AUMID フォールバック付きトースト:
-#  1. 未登録の "Claude Code" AUMID は環境によりサイレント失敗するため
-#  2. 失敗時は PowerShell 自身の登録済み AUMID で再試行する
+#  1. 登録済み AUMID(Windows PowerShell)を優先する。未登録 AUMID
+#     ("Claude Code" 等)は CreateToastNotifier/Show が例外を出さずに
+#     表示だけされない(サイレント失敗)。先頭に置くと後続に到達せず
+#     何も表示されない — 2026-07-11 実測で検出・修正
+#  2. 万一 PowerShell AUMID が無い環境向けに "Claude Code" を後段に残す
+#  3. Show() はトーストを非同期にキューするだけ。detached プロセスが
+#     直後に終了すると配信前に消えるため、末尾で待機して配信猶予を与える
 WIN_TOAST_PS = r"""
 $ErrorActionPreference = 'Stop'
-$null = [Windows.UI.Notifications.ToastNotificationManager,
-         Windows.UI.Notifications, ContentType=WindowsRuntime]
-$null = [Windows.Data.Xml.Dom.XmlDocument,
-         Windows.Data.Xml.Dom.XmlDocument, ContentType=WindowsRuntime]
+# WinRT 型リテラルは1行で書く(カンマ後に改行すると PowerShell が
+# 「型名にアセンブリ名が指定されていません」で構文エラーになり、
+# トーストが一切表示されない — 2026-07-11 実測で検出・修正)
+$null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]
+$null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType=WindowsRuntime]
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
 $xml.LoadXml(@"
 <toast><visual><binding template="ToastGeneric">
@@ -219,8 +225,8 @@ $xml.LoadXml(@"
 "@)
 $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 $ids = @(
-  'Claude Code',
-  '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
+  '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe',
+  'Claude Code'
 )
 foreach ($id in $ids) {
   try {
@@ -229,35 +235,53 @@ foreach ($id in $ids) {
     break
   } catch { continue }
 }
+Start-Sleep -Seconds 5
 """
 
 
 # ---------- プロセス分離起動 ----------
 
-def detached_popen_kwargs() -> dict:
-    """親プロセス終了に道連れにされない Popen kwargs.
+def _popen_kwargs(interactive: bool) -> dict:
+    """分離起動の Popen kwargs.
 
     バグ修正: start_new_session は POSIX 専用で Windows では無視される。
     フックは timeout で数秒後に終了するため、Windows では
-    DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP がないと
-    watchdog(スリープ中)が生き残れない。
+    watchdog(スリープ中)が生き残るための creationflags が要る。
+
+    interactive で2系統に分ける(2026-07-11 実測で必要と判明):
+    - False(watchdog 等・既定): DETACHED_PROCESS で確実に分離し 120 秒生存。
+    - True(通知トースト): DETACHED_PROCESS だと非対話セッション扱いになり
+      トーストが対話デスクトップに配信されず、例外も出ず無表示になる。
+      CREATE_NO_WINDOW なら対話セッション(WinSta0)のまま・ウィンドウ非表示。
+      Windows は親終了で子を道連れにしないので短時間の配信には十分。
     """
     kw: dict = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL,
                 "stdin": subprocess.DEVNULL, "close_fds": True}
     if platform.system() == "Windows":
-        DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
         NEW_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP",
                             0x00000200)
-        kw["creationflags"] = DETACHED_PROCESS | NEW_GROUP
+        if interactive:
+            CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW",
+                                       0x08000000)
+            kw["creationflags"] = CREATE_NO_WINDOW | NEW_GROUP
+        else:
+            DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS",
+                                       0x00000008)
+            kw["creationflags"] = DETACHED_PROCESS | NEW_GROUP
     else:
         kw["start_new_session"] = True
     return kw
 
 
-def spawn_detached(argv: list, extra_env: dict | None = None) -> bool:
+def detached_popen_kwargs() -> dict:
+    return _popen_kwargs(interactive=False)
+
+
+def spawn_detached(argv: list, extra_env: dict | None = None,
+                   interactive: bool = False) -> bool:
     try:
         subprocess.Popen(argv, env={**os.environ, **(extra_env or {})},
-                         **detached_popen_kwargs())
+                         **_popen_kwargs(interactive))
         return True
     except OSError:
         return False
@@ -290,4 +314,5 @@ def fire_native_notify(title: str, body: str) -> None:
     if not cmd:
         return
     argv, extra_env = cmd
-    spawn_detached(argv, extra_env)  # 失敗してもフックを失敗させない
+    # interactive=True: トーストは対話セッションで起動しないと配信されない
+    spawn_detached(argv, extra_env, interactive=True)  # 失敗してもフックを失敗させない
