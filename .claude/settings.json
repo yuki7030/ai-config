@@ -1,4 +1,13 @@
 {
+  "env": {
+    "CLAUDE_DELEGATION_CHECK": "1",
+    "CLAUDE_DELEGATION_STREAK_N": "8",
+    "CLAUDE_SUBAGENT_NOTIFY_SEC": "30",
+    "CLAUDE_SUBAGENT_NOTIFY": "native",
+    "CLAUDE_SUBAGENT_PROGRESS_SEC": "120",
+    "CLAUDE_SUBAGENT_TTL_SEC": "86400",
+    "CLAUDE_DELEGATION_FEEDBACK": "next_session"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -13,6 +22,51 @@
             "type": "command",
             "command": "python3 scripts/lint_vba.py --hook claude || python scripts/lint_vba.py --hook claude",
             "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/subagent_track.py || python scripts/subagent_track.py",
+            "timeout": 10,
+            "statusMessage": "サブエージェント開始を記録中"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/subagent_track.py || python scripts/subagent_track.py",
+            "timeout": 10,
+            "statusMessage": "サブエージェント完了を記録中"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/stop_delegation_check.py || python scripts/stop_delegation_check.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat ~/.claude/delegation_warn.md 2>/dev/null || true"
           }
         ]
       }
