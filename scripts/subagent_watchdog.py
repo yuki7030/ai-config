@@ -52,18 +52,23 @@ def main() -> int:
             sc.reap(agent_id, entry["agent_type"])
             log(f"REAP  {entry['agent_type']} id={agent_id} "
                 f"elapsed={elapsed:.0f}s (SubagentStop未発火を刈り取り)")
+            proj = Path(entry.get("cwd", "")).name if entry.get("cwd") \
+                else ""
+            suffix = f"  [{proj}]" if proj else ""
             if elapsed >= NOTIFY_SEC:
                 sc.fire_native_notify(
                     "Claude Code",
                     f"subagent {entry['agent_type']} "
-                    f"\u5b8c\u4e86 ({elapsed:.0f}s)")
+                    f"\u5b8c\u4e86 ({elapsed:.0f}s){suffix}", kind="reaped")
             return 0
 
         elapsed = time.time() - entry["started_at"]
+        proj = Path(entry.get("cwd", "")).name if entry.get("cwd") else ""
+        suffix = f"  [{proj}]" if proj else ""
         sc.fire_native_notify(
             "Claude Code",
             f"subagent {entry['agent_type']} \u307e\u3060\u5b9f\u884c\u4e2d "
-            f"({elapsed/60:.1f}\u5206\u7d4c\u904e)")
+            f"({elapsed/60:.1f}\u5206\u7d4c\u904e){suffix}", kind="progress")
         if once:
             return 0
     return 0

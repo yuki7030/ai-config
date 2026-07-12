@@ -70,6 +70,28 @@
           }
         ]
       }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/notification_toast.py permission || python scripts/notification_toast.py permission",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/notification_toast.py idle || python scripts/notification_toast.py idle",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

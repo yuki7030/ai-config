@@ -81,7 +81,8 @@ def _rotate() -> None:
 
 
 def append_event(ev: str, agent_id: str, agent_type: str,
-                 session_id: str = "", transcript: str = "") -> None:
+                 session_id: str = "", transcript: str = "",
+                 cwd: str = "") -> None:
     EVENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
     try:
         if EVENTS_FILE.exists() and EVENTS_FILE.stat().st_size > ROTATE_BYTES:
@@ -91,7 +92,7 @@ def append_event(ev: str, agent_id: str, agent_type: str,
     line = json.dumps({
         "ts": time.time(), "ev": ev, "id": agent_id,
         "agent": agent_type, "session": session_id,
-        "transcript": transcript,
+        "transcript": transcript, "cwd": cwd,
     }, ensure_ascii=False) + "\n"
     with open(EVENTS_FILE, "a", encoding="utf-8") as f:
         f.write(line)
@@ -132,6 +133,7 @@ def running_set(now: float | None = None) -> dict:
                 "started_at": e.get("ts", now),
                 "session_id": e.get("session", ""),
                 "transcript": e.get("transcript", ""),
+                "cwd": e.get("cwd", ""),
             }
         elif e.get("ev") == "stop":
             if eid and eid in running:
@@ -217,9 +219,15 @@ $ErrorActionPreference = 'Stop'
 # トーストが一切表示されない — 2026-07-11 実測で検出・修正)
 $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]
 $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType=WindowsRuntime]
+# アイコン: CC_TOAST_ICON が実在ファイルなら appLogoOverride で表示
+$img = ''
+if ($env:CC_TOAST_ICON -and (Test-Path -LiteralPath $env:CC_TOAST_ICON)) {
+  $img = '<image placement="appLogoOverride" hint-crop="circle" src="file:///' + ($env:CC_TOAST_ICON -replace '\\','/') + '"/>'
+}
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
 $xml.LoadXml(@"
 <toast><visual><binding template="ToastGeneric">
+$img
 <text>$($env:CC_TOAST_TITLE)</text><text>$($env:CC_TOAST_BODY)</text>
 </binding></visual></toast>
 "@)
@@ -287,12 +295,51 @@ def spawn_detached(argv: list, extra_env: dict | None = None,
         return False
 
 
-def native_notify_cmd(title: str, body: str):
+TOAST_KINDS = ("permission", "done", "reaped", "progress", "idle")
+
+
+def toast_icon_path(kind: str = "") -> str:
+    """トーストアイコンの解決(kind別 → 汎用 → なし の4段フォールバック).
+
+    1. CLAUDE_TOAST_ICON_<KIND>(kind別の明示指定)
+    2. ~/.claude/toast-icons/<kind>.png(kind別の既定配置)
+    3. CLAUDE_TOAST_ICON(汎用の明示指定)
+    4. ~/.claude/claude-crab.png(汎用の既定)
+    どれも無ければ空 = アイコンなしで表示(best-effort)。
+
+    同梱アイコンはオリジナル描画のカニ+コーナーバッジ(Anthropic 公式の
+    🦀 アセットは商標表記付きのため同梱・使用しない)。
+    """
+    cands = []
+    if kind:
+        env_k = os.environ.get(f"CLAUDE_TOAST_ICON_{kind.upper()}")
+        if env_k:
+            cands.append(env_k)
+        cands.append(str(Path.home() / ".claude" / "toast-icons"
+                         / f"{kind}.png"))
+    env_g = os.environ.get("CLAUDE_TOAST_ICON")
+    if env_g:
+        cands.append(env_g)
+    cands.append(str(Path.home() / ".claude" / "claude-crab.png"))
+    for c in cands:
+        if Path(c).exists():
+            return c
+    return ""
+
+
+def muted_kinds() -> set:
+    """CLAUDE_TOAST_MUTE=idle,progress のように種類単位で通知を止める."""
+    raw = os.environ.get("CLAUDE_TOAST_MUTE", "")
+    return {k.strip() for k in raw.split(",") if k.strip()}
+
+
+def native_notify_cmd(title: str, body: str, kind: str = ""):
     sysname = platform.system()
     if sysname == "Windows":
         return (["powershell", "-NoProfile", "-NonInteractive",
                  "-Command", WIN_TOAST_PS],
-                {"CC_TOAST_TITLE": title, "CC_TOAST_BODY": body})
+                {"CC_TOAST_TITLE": title, "CC_TOAST_BODY": body,
+                 "CC_TOAST_ICON": toast_icon_path(kind)})
     if sysname == "Darwin":
         script = (f'display notification "{body}" '
                   f'with title "{title}" sound name "Glass"')
@@ -302,15 +349,17 @@ def native_notify_cmd(title: str, body: str):
     return None
 
 
-def fire_native_notify(title: str, body: str) -> None:
+def fire_native_notify(title: str, body: str, kind: str = "") -> None:
+    if kind and kind in muted_kinds():
+        return  # 種類単位のミュート(例: CLAUDE_TOAST_MUTE=idle)
     if NOTIFY_FILE:  # テスト用: 実発火の代わりにファイルへ記録
         try:
             with open(NOTIFY_FILE, "a", encoding="utf-8") as f:
-                f.write(f"{title}|{body}\n")
+                f.write(f"{title}|{body}|{kind}\n")
         except OSError:
             pass
         return
-    cmd = native_notify_cmd(title, body)
+    cmd = native_notify_cmd(title, body, kind)
     if not cmd:
         return
     argv, extra_env = cmd

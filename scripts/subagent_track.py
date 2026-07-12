@@ -76,7 +76,8 @@ def main() -> int:
             "start", agent_id, agent_type,
             session_id=str(data.get("session_id") or ""),
             transcript=subagent_transcript_path(
-                str(data.get("transcript_path") or ""), agent_id))
+                str(data.get("transcript_path") or ""), agent_id),
+            cwd=str(data.get("cwd") or ""))
         log(f"START {agent_type} id={agent_id}")
         spawn_watchdog(agent_id)
         if sc.NOTIFY_MODE in ("osc", "both"):
@@ -98,10 +99,13 @@ def main() -> int:
                     f"{agent_type} \u5b8c\u4e86 ({elapsed:.0f}s)")
             out["terminalSequence"] = seq
         if long_run:
+            proj = Path(str(data.get("cwd") or "")).name
+            suffix = f"  [{proj}]" if proj else ""
             if sc.NOTIFY_MODE in ("native", "both"):
                 sc.fire_native_notify(
                     "Claude Code",
-                    f"subagent {agent_type} \u5b8c\u4e86 ({elapsed:.0f}s)")
+                    f"subagent {agent_type} \u5b8c\u4e86 "
+                    f"({elapsed:.0f}s){suffix}", kind="done")
             # systemMessage は長時間実行のみ(スパム防止)
             out["systemMessage"] = (
                 f"\u2713 subagent {agent_type} \u5b8c\u4e86 "

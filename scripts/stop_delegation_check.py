@@ -62,6 +62,10 @@ def main() -> int:
     if os.environ.get("CLAUDE_DELEGATION_CHECK", "0") != "1":
         return 0
     data = json.load(sys.stdin)
+    # 無限ループガード: Stop フック起因の継続で再発火した Stop では
+    # 何もしない(特に immediate モードは会話継続を起こすため必須)
+    if data.get("stop_hook_active"):
+        return 0
     tpath = str(data.get("transcript_path") or "")
     if not os.path.exists(tpath):
         return 0
