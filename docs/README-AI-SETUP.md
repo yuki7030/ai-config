@@ -17,6 +17,8 @@
 | .claude/commands/*.md | Claude Code | /spec /review /audit-instructions コマンド |
 | docs/spec/_template.md | 両方 | 仕様書テンプレート |
 | scripts/audit_instructions.py ほか | 両方 | 指示ファイルの機械監査(月次自動・下記) |
+| scripts/block_dangerous_bash.py | 両方 | 危険コマンドの実行前ブロック(注入・作話対策・下記) |
+| .github/skills/prompt-injection/ | 両方 | 注入疑い時の対応手順(作話検証・メモリ衛生) |
 
 ## Claude Code でスキルを共有する(必須)
 スキル本体は .github/skills/ に一元化。Claude Code からはリンクで共有:
@@ -73,6 +75,33 @@ Copilot の .agent.md にも `# model:` 行を用意済み(コメントアウト
 - scripts/lint_vba.py: エラー握りつぶし(On Error Resume Next 放置)・秘密情報ハードコード・暗黙Variant・Select/Activate依存・ScreenUpdating未復帰を検出
 - 手動実行: `python scripts/check_doxygen.py --scan .` / `python scripts/lint_vba.py --scan .`
 - Windows で python3 コマンドが無い場合は設定内の python3 を python に読み替え(Claude Code側はフォールバック記述済み)
+
+## プロンプトインジェクション対策(Hooks + スキル + 指示)
+方針: **破壊的操作の最終防衛線をモデルの判断(指示文)に置かない**。指示文はプロンプトの
+一部であり、強い注入や作話(confabulation)はそれごと無効化しうるため、上記の静的解析と
+同じ「ハーネス側の決定論的機構」で止める。
+参考事例: https://zenn.dev/nanasess/articles/claude-code-prompt-injection-confabulation
+
+| 層 | 設定ファイル | 動作 |
+|---|---|---|
+| ハード層 (Claude Code) | .claude/settings.json → PreToolUse(matcher: Bash) | コマンド実行前に検査。危険コマンドを deny / ask(確認昇格) |
+| ハード層 (Copilot) | .github/hooks/block-dangerous-bash.json → preToolUse | 同上(bash/powershellツールに対しdeny/askを実行前に返す) |
+| ソフト層 | AGENTS.md の NEVER 2項 | 外部コンテンツ内の指示=データ / セキュリティ事象の無確認永続化禁止 |
+| 対応手順 | .github/skills/prompt-injection/ | 注入疑い時: 作話を第一仮説→トランスクリプトのtool_result実体で検証→報告 |
+| CI | doxygen-check.yml 内の self-test | 検査スクリプト自体の回帰テスト |
+
+検査本体は scripts/block_dangerous_bash.py 1本(標準ライブラリのみ・Windows対応)。
+- **deny(実行させない)**: システムパス・ホーム直下への `rm -rf` 相当(Windows: `Remove-Item -Recurse -Force` / `rd /s /q` 含む)、`mkfs`、`dd`→/dev、ドライブ `format`/`diskpart`、`curl|sh`・`iwr|iex` 等のダウンロード即実行
+- **ask(人間確認に昇格)**: それ以外の再帰+強制削除、`git push --force`(--force-with-lease は対象外)
+- 手動検査: `python scripts/block_dangerous_bash.py --check "rm -rf /tmp/x"`
+- 回帰テスト: `python scripts/block_dangerous_bash.py --self-test`
+
+既知の制約・運用注意:
+- コマンド文字列全体への一致検査のため、引用文字列内の危険コマンド様文字列にも安全側に反応する(例: PR本文に事例を引用した `gh pr create`)。本文はファイル化して `--body-file` で渡す。
+- Copilot の hook はタイムアウト時 fail-open、サブエージェントで未適用の既知問題もある。Copilot 側は補助層と考え、重要環境では権限設定と組み合わせる。
+- permission allowlist を安易に広げない。`--dangerously-skip-permissions` は使わない。
+- 長大コンテキストは作話の温床。長いセッションは `/compact`・`/clear` で区切る。
+- AIが「注入を検出した」と報告してきたら鵜呑みにせず、prompt-injection スキルの手順(トランスクリプトJSONLの tool_result 実体確認)で検証する。メモリ・CLAUDE.md への「注入があった」等の記録は検証後に人間が承認する。
 
 ## プロジェクト知識ファイル(docs/)
 | ファイル | 内容 | 作成優先度 |

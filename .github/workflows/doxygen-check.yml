@@ -14,3 +14,5 @@ jobs:
         run: python scripts/check_doxygen.py --scan .
       - name: VBA静的検査
         run: python scripts/lint_vba.py --scan .
+      - name: 危険コマンド検査フックのセルフテスト
+        run: python scripts/block_dangerous_bash.py --self-test

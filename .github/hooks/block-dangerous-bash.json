@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "python3 scripts/block_dangerous_bash.py --hook copilot",
+        "powershell": "python scripts/block_dangerous_bash.py --hook copilot",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
