@@ -18,7 +18,7 @@ AGENTS.md / CLAUDE.md / .github/copilot-instructions.md / .github/instructions/ 
 1. 古い記述: 存在しないパス・コマンドへの参照。廃止済み機能・旧仕様の残骸。180日以上未更新のファイルは現行性を確認。
 2. 重複: 同一ルールの複数ファイル記載。原則「AGENTS.md=常駐の最小共通則 / SKILL.md=詳細本体 / 他は参照のみ」。重複は参照に置換(ロード契機が異なる段階的要約は許容し、その旨を記録)。
 3. 矛盾: ルール間の競合(優先順位未定義)。ペアファイル(.claude/agents/X.md ⇔ .github/agents/X.agent.md、.claude/commands ⇔ .github/prompts)の内容乖離。
-4. 肥大化: AGENTS.md ≤40行 / SKILL.md ≤100行 / instructions ≤20行。モデルが確実に従える指示は150〜200個が上限。1行ごとに「この行を消すとAIが誤動作するか?」を自問し、Noなら削除。
+4. 肥大化: AGENTS.md ≤90行(常駐ガードレールを含むため。参照的な運用詳細はスキルへ分離) / SKILL.md ≤100行 / instructions ≤20行。モデルが確実に従える指示は150〜200個が上限。1行ごとに「この行を消すとAIが誤動作するか?」を自問し、Noなら削除。
 5. 実効性: 「なぜ」の無い規則には理由を1句添える。曖昧語(「適切に」等)を具体化。AIが繰り返し無視するルールは Hooks/CI への機械化を提案。
 6. フロントマター: agents の tools 明示(最小権限)。description は自動委譲のトリガーになるため対象・拡張子・用途を具体的に。instructions の applyTo の妥当性。
 7. 未記入プレースホルダ: テンプレート以外に残る `<...>`・(例)・空セクション。

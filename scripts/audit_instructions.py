@@ -33,7 +33,9 @@ TARGETS = [
     ".claude/commands/*.md",
 ]
 BUDGETS = [  # (ファイル名サフィックス, 最大行数)
-    ("AGENTS.md", 40),
+    # 常駐すべき行動ガードレール(停止条件・進捗報告の裏付け・上流判断・
+    # 思考の質)を含むため90行を上限とする。参照的な運用詳細はスキルへ分離済み。
+    ("AGENTS.md", 90),
     ("CLAUDE.md", 10),
     ("copilot-instructions.md", 10),
     ("SKILL.md", 100),
