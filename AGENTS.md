@@ -36,38 +36,10 @@
 
 ## Excel VBA 開発 (xlflow)
 
-このリポジトリのVBA開発は xlflow で行う。VBEは使用しない。
-詳細な手順・安全規則は `.github/skills/xlflow/SKILL.md`(実体。`.claude/skills/`・`.agents/skills/` からのリンク)を必ず読むこと。
-
-### 基本ループ
-
-1. `xlflow session start` でセッションを開始する
-2. `src/` 配下の .bas / .cls を編集する(UTF-8のまま。CP932変換は
-   push時に自動で行われる)
-3. `xlflow push --fast --session --no-save --json` で反映する
-   (preflightのlintで失敗したら指摘箇所を修正して再push)
-4. `xlflow run --session --json` または `xlflow test` で実行・検証する
-5. エラーはJSONの Diagnostic (種別・モジュール・行番号・コード) を読んで
-   自己修正する。人間への確認は不要
-6. 完了したら `xlflow save --json` → `xlflow session stop`
-
-### 規則
-
-- `Debug.Print` 禁止 → `XlflowDebug.Log` を使う
-- `MsgBox` / `InputBox` 直接使用禁止 → `XlflowUI.MsgBox("dialog-id", ...)`
-  形式を使い、実行時は `--msgbox dialog-id=yes` 等で応答を与える
-- テストは `src/modules/Tests/` に `Test` 接頭辞のSubで書き、
-  `XlflowAssert` (AssertEquals / AssertNotEqual / AssertTrue / AssertFalse /
-  AssertIsNothing / AssertIsNotNothing / AssertFail / AssertInconclusive)
-  でアサーションする。`BeforeAll` / `BeforeEach` / `AfterEach` / `AfterAll`
-  フックと `'@Tag("...")` が使える
-- 新機能はTDDで実装する: テスト作成 → `xlflow test` 失敗確認 → 実装 →
-  PASS → `xlflow lint` → `xlflow fmt . --write`
-- UserFormは .frm を直接編集せず `src/forms/specs/*.yaml` を編集して
-  `xlflow form build <spec> --session --json` で生成する
-- シート状態の検証は `xlflow inspect range --sheet <名前> --address <範囲> --json`
-- ワークシート数式に依存する変更の前には `xlflow formulas pull --json` で
-  数式スナップショットを確認する
+このリポジトリのVBA開発は xlflow で行う(VBEは使わない)。基本ループ・
+安全規則(Debug.Print/MsgBox禁止)・TDD手順・UserForm/シート/数式の扱いは
+`.github/skills/xlflow/SKILL.md` を必ず読むこと。VBA実装着手時は同スキルと
+`.github/skills/vba-coding/SKILL.md` を参照する。
 
 ## プロジェクト知識(該当時に必ず参照)
 - 不明な用語・略語 → docs/glossary.md(推測で解釈しない)
