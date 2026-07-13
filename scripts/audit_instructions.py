@@ -43,6 +43,10 @@ BUDGETS = [  # (ファイル名サフィックス, 最大行数)
 ]
 # セットアップ時に生成される等の理由で、リポジトリに存在しなくてよい参照
 REF_ALLOW = {".claude/skills"}
+# Claude Code 専用のオーケストレーション用エージェント(組み込みExplore上書き・
+# サブエージェント委譲機構)。Copilot は同等の自動委譲を持たないため、
+# .github/agents 側のペアを意図的に持たない。ペア整合チェックから除外する。
+CLAUDE_ONLY_AGENTS = {"Explore", "explorer", "scanner", "reviewer", "challenger"}
 PATH_RE = re.compile(r"(?<![\w/@])((?:docs|scripts|\.github|\.claude)/[\w\-./]+)")
 PLACEHOLDER_RE = re.compile("<[^<>]{1,40}>|\uFF08例\uFF09")
 STALE_DAYS = 180
@@ -183,7 +187,7 @@ def main() -> int:
     # 7) .claude ⇔ .github ペア整合
     ca = {q.stem for q in (root / ".claude/agents").glob("*.md")}
     ga = {q.name[:-len(".agent.md")] for q in (root / ".github/agents").glob("*.agent.md")}
-    for name in sorted(ca - ga):
+    for name in sorted(ca - ga - CLAUDE_ONLY_AGENTS):
         add("ERROR", f".claude/agents/{name}.md", "対応する .github/agents/*.agent.md が無い")
     for name in sorted(ga - ca):
         add("ERROR", f".github/agents/{name}.agent.md", "対応する .claude/agents/*.md が無い")

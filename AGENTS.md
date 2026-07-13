@@ -51,6 +51,10 @@
 
 ## モデルルーティング
 
+以下の explorer / scanner / reviewer / Explore は **Claude Code 専用**の
+サブエージェント委譲機構(`.claude/agents/`)。Copilot は同等の自動委譲を
+持たないため対応する `.github/agents/` を意図的に置かない。
+
 | タスク種別 | 実行先 | モデル/effort | 根拠 |
 |---|---|---|---|
 | 実装・設計・複雑なデバッグ | 親セッション | Opus (session) | 初回正確性が必要 |
