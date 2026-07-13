@@ -31,6 +31,7 @@ TARGETS = [
     ".github/prompts/*.prompt.md",
     ".claude/agents/*.md",
     ".claude/commands/*.md",
+    "docs/README-*.md",  # 参照切れ検出のため導入ガイド類も走査(行数/frontmatter対象外)
 ]
 BUDGETS = [  # (ファイル名サフィックス, 最大行数)
     # 常駐すべき行動ガードレール(停止条件・進捗報告の裏付け・上流判断・
@@ -43,7 +44,8 @@ BUDGETS = [  # (ファイル名サフィックス, 最大行数)
     (".agent.md", 15),
     (".prompt.md", 15),
 ]
-# セットアップ時に生成される等の理由で、リポジトリに存在しなくてよい参照
+# セットアップ時に生成される等の理由で存在しなくてよい参照。配下(サブパス)も
+# 許可する(例: .claude/skills/xlflow はsetup.ps1が張るシンボリックリンク)。
 REF_ALLOW = {".claude/skills"}
 # Claude Code 専用のオーケストレーション用エージェント(組み込みExplore上書き・
 # サブエージェント委譲機構)。Copilot は同等の自動委譲を持たないため、
@@ -149,7 +151,8 @@ def main() -> int:
                 cand = m.group(1).rstrip("。、.,;:)」")
                 if cand.endswith("-") or "YYYY" in cand or "XXX" in cand or re.search(r"/X\.", cand):
                     continue  # プレースホルダを含む参照
-                if cand.rstrip("/") in REF_ALLOW:
+                c = cand.rstrip("/")
+                if any(c == a or c.startswith(a + "/") for a in REF_ALLOW):
                     continue
                 if not (root / cand).exists():
                     add("ERROR", p, f"存在しないパスへの参照: {cand}")
