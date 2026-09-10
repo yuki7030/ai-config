@@ -1,0 +1,73 @@
+{
+  // Claude が実行したコマンドの出力は Claude 側にしか返らないため、
+  // フック / tee がログへ落とした内容を統合ターミナルで追尾する。
+  //
+  // タスクの自動起動は folderOpen しか無いが、追尾そのものは
+  // tail-log.ps1 が -Trigger の出現を待ってから始める。
+  // よってフォルダを開いた直後は待機表示だけで、古いログは流れない。
+  //
+  // type は "shell" ではなく "process"。shell だと VS Code が
+  // コマンド行を再クォートし、PowerShell へ渡した引用符が壊れる。
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // トリガ: xlflow session start が作る .xlflow/session.json
+      "label": "xlflow log",
+      "type": "process",
+      "command": "powershell",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/.vscode/tail-log.ps1",
+        "-Path",
+        "${workspaceFolder}/.claude/logs/xlflow-run.log",
+        "-Trigger",
+        "${workspaceFolder}/.xlflow/session.json",
+        "-Label",
+        "xlflow",
+        "-HideJson"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false,
+        "clear": true
+      }
+    },
+    {
+      // トリガ: SessionStart/SessionEnd フックが置く .session-active マーカー
+      "label": "claude-bash log",
+      "type": "process",
+      "command": "powershell",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/.vscode/tail-log.ps1",
+        "-Path",
+        "${workspaceFolder}/.claude/logs/claude-bash.log",
+        "-Trigger",
+        "${workspaceFolder}/.claude/logs/.session-active",
+        "-Label",
+        "Claude"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false,
+        "clear": true
+      }
+    }
+  ]
+}

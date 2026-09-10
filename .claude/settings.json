@@ -36,6 +36,28 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/log_bash_output.py || python scripts/log_bash_output.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/log_bash_output.py --failure || python scripts/log_bash_output.py --failure",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -79,6 +101,22 @@
           {
             "type": "command",
             "command": "cat ~/.claude/delegation_warn.md 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "mkdir -p .claude/logs && date +%s > .claude/logs/.session-active || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rm -f .claude/logs/.session-active || true",
+            "timeout": 10
           }
         ]
       }
