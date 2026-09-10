@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/block_dangerous_bash.py --hook claude || python scripts/block_dangerous_bash.py --hook claude",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/block_dangerous_bash.py\" --hook claude || python \"$CLAUDE_PROJECT_DIR/scripts/block_dangerous_bash.py\" --hook claude",
             "timeout": 10
           }
         ]
@@ -27,12 +27,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/check_doxygen.py --hook claude || python scripts/check_doxygen.py --hook claude",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/check_doxygen.py\" --hook claude || python \"$CLAUDE_PROJECT_DIR/scripts/check_doxygen.py\" --hook claude",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "python3 scripts/lint_vba.py --hook claude || python scripts/lint_vba.py --hook claude",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/lint_vba.py\" --hook claude || python \"$CLAUDE_PROJECT_DIR/scripts/lint_vba.py\" --hook claude",
             "timeout": 20
           }
         ]
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/log_bash_output.py || python scripts/log_bash_output.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/log_bash_output.py\" || python \"$CLAUDE_PROJECT_DIR/scripts/log_bash_output.py\"",
             "timeout": 10
           }
         ]
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/log_bash_output.py --failure || python scripts/log_bash_output.py --failure",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/log_bash_output.py\" --failure || python \"$CLAUDE_PROJECT_DIR/scripts/log_bash_output.py\" --failure",
             "timeout": 10
           }
         ]
@@ -65,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/subagent_track.py || python scripts/subagent_track.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/subagent_track.py\" || python \"$CLAUDE_PROJECT_DIR/scripts/subagent_track.py\"",
             "timeout": 10,
             "statusMessage": "サブエージェント開始を記録中"
           }
@@ -77,7 +77,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/subagent_track.py || python scripts/subagent_track.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/subagent_track.py\" || python \"$CLAUDE_PROJECT_DIR/scripts/subagent_track.py\"",
             "timeout": 10,
             "statusMessage": "サブエージェント完了を記録中"
           }
@@ -89,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/stop_delegation_check.py || python scripts/stop_delegation_check.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/stop_delegation_check.py\" || python \"$CLAUDE_PROJECT_DIR/scripts/stop_delegation_check.py\"",
             "timeout": 15
           }
         ]
@@ -104,7 +104,7 @@
           },
           {
             "type": "command",
-            "command": "mkdir -p .claude/logs && date +%s > .claude/logs/.session-active || true",
+            "command": "mkdir -p \"$CLAUDE_PROJECT_DIR/.claude/logs\" && date +%s > \"$CLAUDE_PROJECT_DIR/.claude/logs/.session-active\" || true",
             "timeout": 10
           }
         ]
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "rm -f .claude/logs/.session-active || true",
+            "command": "rm -f \"$CLAUDE_PROJECT_DIR/.claude/logs/.session-active\" || true",
             "timeout": 10
           }
         ]
@@ -127,7 +127,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/notification_toast.py permission || python scripts/notification_toast.py permission",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/notification_toast.py\" permission || python \"$CLAUDE_PROJECT_DIR/scripts/notification_toast.py\" permission",
             "timeout": 10
           }
         ]
@@ -137,7 +137,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/notification_toast.py idle || python scripts/notification_toast.py idle",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/notification_toast.py\" idle || python \"$CLAUDE_PROJECT_DIR/scripts/notification_toast.py\" idle",
             "timeout": 10
           }
         ]
