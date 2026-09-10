@@ -43,6 +43,9 @@ End Function
 '* @param   cacheKey  キャッシュキー
 '* @param   outObj    取り出し先。ヒット時のみ設定する
 '* @return  ヒットすれば True
+'* @details 返るのは L1 が保持している共有参照。呼び出し側が中身を書き換えると
+'*          後続テストのフィクスチャが汚染され、順序依存の失敗を招く。
+'*          読み取りに限って使うか、書き換えるなら配列から組み直すこと。
 Public Function TryGetObject(ByVal cacheKey As String, ByRef outObj As Object) As Boolean
     EnsureStores
 
@@ -135,15 +138,17 @@ Public Sub ClearMemory()
     Set mArrays = Nothing
 End Sub
 
-'* @brief   L2 のキャッシュファイルを削除する
-'* @details ローダーの SCHEMA_VERSION 上げ忘れに気付いたときの復旧手段を兼ねる。
-'*          ただし本 Sub は L1 に触れない。同一 Excel プロセス内では L1 が
-'*          古い加工結果を返し続けるため、復旧目的なら ClearMemory も併せて呼ぶこと。
+'* @brief   L2 のキャッシュファイルを削除し、L1 も併せて空にする
+'* @details ローダーの SCHEMA_VERSION 上げ忘れに気付いたときの復旧手段。
+'*          L1 を残すと同一 Excel プロセス内で古い加工結果を返し続け、
+'*          復旧手段として成立しないため、両層をまとめて破棄する。
 Public Sub ClearDisk()
     Dim dirPath As String
     Dim name As String
     Dim victims As Collection
     Dim victim As Variant
+
+    ClearMemory
 
     dirPath = CacheDir()
     If Len(FolderName(dirPath)) = 0 Then

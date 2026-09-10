@@ -261,6 +261,7 @@ Public Sub Test_Cache_PutArray_RejectsNon2DValue()
     Dim oneDim As Variant
     Dim unallocated() As Variant
     Dim wrapper As Variant
+    Dim threeDim As Variant
 
     oneDim = Array(1, 2, 3)
 
@@ -286,6 +287,36 @@ Public Sub Test_Cache_PutArray_RejectsNon2DValue()
     Err.Clear
     On Error GoTo 0
     XlflowAssert.AssertEquals ERR_NOT_2D, errNumber, "スカラーは 602"
+
+    ' 3次元以上を素通りさせると Serialize の data(r, c) がエラー9になり 602 にならない
+    ReDim threeDim(1 To 2, 1 To 2, 1 To 2)
+    On Error Resume Next
+    TestFixtureCache.PutArray "probe|3d|v1", threeDim
+    errNumber = Err.Number
+    Err.Clear
+    On Error GoTo 0
+    XlflowAssert.AssertEquals ERR_NOT_2D, errNumber, "3次元配列は 602"
+End Sub
+
+'* @brief   ClearDisk が L1 も空にする(復旧手段として成立させるため)
+Public Sub Test_Cache_ClearDisk_AlsoClearsMemory()
+    Dim cached As Object
+    Dim fetched As Object
+    Dim data As Variant
+    Const KEY_NAME As String = "probe|cleardisk|v1"
+
+    Set cached = CreateObject("Scripting.Dictionary")
+    cached.Add "answer", 42
+    TestFixtureCache.PutObject KEY_NAME, cached
+
+    ReDim data(1 To 1, 1 To 1)
+    data(1, 1) = CDbl(1)
+    TestFixtureCache.PutArray KEY_NAME, data
+
+    TestFixtureCache.ClearDisk
+
+    XlflowAssert.AssertFalse TestFixtureCache.TryGetObject(KEY_NAME, fetched), "L1 のオブジェクトも消える"
+    XlflowAssert.AssertFalse TestFixtureCache.TryGetArray(KEY_NAME, data), "L1 の配列も消える"
 End Sub
 
 '* @brief   AC-10: L2 ヒットが実ロードの50%以下の時間で済む
@@ -431,6 +462,9 @@ Private Sub EnsureFixtureWorkbook()
     Dim r As Long
     Dim c As Long
     Dim prevAlerts As Boolean
+    Dim errNumber As Long
+    Dim errSource As String
+    Dim errDescription As String
 
     If FileExistsAt(mFixturePath) Then
         Exit Sub
@@ -447,13 +481,35 @@ Private Sub EnsureFixtureWorkbook()
     values(1, 1) = "見出し"
 
     prevAlerts = Application.DisplayAlerts
+
+    ' 途中で失敗しても隠しブックと DisplayAlerts を残さない。残すと
+    ' モジュール全テストが before_all_failed になり AfterAll の Kill も 70 で落ちる
+    On Error GoTo Cleanup
     Application.DisplayAlerts = False
     Set wb = Application.Workbooks.Add
     wb.Worksheets(1).Range("A1").Resize(FIXTURE_ROWS, FIXTURE_COLS).Value2 = values
     wb.SaveAs mFixturePath, 51
     wb.Close False
     Set wb = Nothing
+
+Cleanup:
+    errNumber = Err.Number
+    errSource = Err.Source
+    errDescription = Err.Description
+
+    If Not wb Is Nothing Then
+        On Error Resume Next
+        wb.Close False
+        Set wb = Nothing
+        Err.Clear
+        On Error GoTo 0
+    End If
+
     Application.DisplayAlerts = prevAlerts
+
+    If errNumber <> 0 Then
+        Err.Raise errNumber, errSource, errDescription
+    End If
 End Sub
 
 '* @brief   内容を保ったまま更新日時だけを現在時刻へ動かす

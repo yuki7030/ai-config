@@ -248,12 +248,32 @@ Public Function Is2DArray(ByRef value As Variant) As Boolean
         Exit Function
     End If
 
-    ' 未初期化の動的配列と1次元配列は UBound(,2) がエラー9になる。
-    ' VBA に割り当て状態を直接調べる手段が無いため、エラーの有無で判定する
-    On Error Resume Next
-    Is2DArray = (UBound(value, 2) >= LBound(value, 2))
+    ' 3次元以上を通すと Serialize の data(r, c) がエラー9になり、
+    ' PutArray が返すべき 602 にならない。次元数をちょうど2に絞る
+    Is2DArray = (DimensionCount(value) = 2)
+End Function
+
+'* @brief   配列の次元数を数える
+'* @param   value  対象の配列
+'* @return  次元数。未初期化の動的配列は 0
+'* @details VBA に割り当て状態と次元数を直接調べる手段が無いため、
+'*          UBound が失敗する次元の1つ手前を数える。配列は最大60次元。
+Private Function DimensionCount(ByRef value As Variant) As Long
+    Dim i As Long
+    Dim span As Long
+
+    On Error GoTo Done
+    For i = 1 To 60
+        ' span は UBound を実際に評価させるために受ける
+        span = UBound(value, i) - LBound(value, i)
+    Next i
+
+Done:
     Err.Clear
-    On Error GoTo 0
+    DimensionCount = i - 1
+    If span < 0 Then
+        DimensionCount = 0
+    End If
 End Function
 
 '* @brief   キャッシュキーから16進8桁のハッシュを得る(FNV-1a 32bit)

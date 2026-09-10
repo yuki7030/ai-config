@@ -79,7 +79,7 @@ Public Sub PutArray(ByVal cacheKey As String, ByRef data As Variant)
 
 ' 破棄
 Public Sub ClearMemory()   ' L1 のみ
-Public Sub ClearDisk()     ' L2 のみ。キャッシュディレクトリ配下を削除
+Public Sub ClearDisk()     ' L2 を削除し、L1 も空にする(復旧手段)
 Public Function CacheDir() As String
 ```
 
@@ -167,6 +167,12 @@ COM 参照の解放は `.github/skills/xlflow/references/testing.md` の
      承認を得たうえで本行へ差し替えた。凍結済み SPEC の改訂だが、AI の独断ではなく
      人間の裁定によるものであることを記録として残す。 -->
 
+
+<!-- ClearDisk の役割改訂(2026-09-10、セルフレビュー後):
+     当初は「L2 のみを削除する」と定めていたが、それでは同一 Excel プロセス内で
+     L1 が古い加工結果を返し続け、SCHEMA_VERSION 上げ忘れの復旧手段として
+     成立しないことがレビューで判明した。ユーザの裁定を得て L1 も空にする
+     仕様へ改めた。凍結済み SPEC の改訂だが、AI の独断ではない。 -->
 
 ## 5. 影響範囲
 
@@ -285,7 +291,9 @@ L1 のオブジェクト辞書に格納する。ディスクへは書かない�
 **`ClearMemory` / `ClearDisk`**
 
 `ClearMemory` は L1 の両辞書を空にする。`ClearDisk` は `CacheDir` 配下のキャッシュファイルを
-削除する。ローダーの `SCHEMA_VERSION` を上げ忘れた際の復旧手段を兼ねる。
+削除したうえで `ClearMemory` を呼び、L1 も空にする。ローダーの `SCHEMA_VERSION` を上げ忘れた
+際の復旧手段であり、L1 を残すと同一 Excel プロセス内で古い加工結果を返し続けて復旧が
+成立しないため、両層をまとめて破棄する。
 
 **外部ブックを読む側の規約**
 
