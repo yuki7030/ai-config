@@ -8,4 +8,6 @@
 (features/ を全文検索しない)。該当が無い場合の手順は
 .github/skills/spec-writing/SKILL.md を参照。
 
-_登録された FEAT はまだありません。_
+| FEAT | 機能名 | 対象 | 対象モジュール |
+|---|---|---|---|
+| [FEAT-001](FEAT-001-test-fixture-cache.md) | テスト用フィクスチャキャッシュ層 | VBA | TestFixtureCache.bas, TestFixtureCodec.bas |
