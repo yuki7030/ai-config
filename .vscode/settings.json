@@ -1,0 +1,5 @@
+{
+  // .vscode/tasks.json の folderOpen タスク(ログ追尾)を確認ダイアログなしで起動する。
+  // .code-workspace 経由ではなくフォルダを直接開いた場合にもこちらが効く。
+  "task.allowAutomaticTasks": "on"
+}
